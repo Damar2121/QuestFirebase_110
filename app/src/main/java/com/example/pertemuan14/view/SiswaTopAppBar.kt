@@ -1,4 +1,4 @@
-package com.example.pertemuan14.route.view
+package com.example.pertemuan14.view
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
