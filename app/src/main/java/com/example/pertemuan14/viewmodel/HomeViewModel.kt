@@ -1,8 +1,13 @@
 package com.example.pertemuan14.viewmodel
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.pertemuan14.modeldata.Siswa
 import com.example.pertemuan14.repositori.RepositorySiswa
+import kotlinx.coroutines.launch
 import java.io.IOException
 
 sealed interface StatusUiSiswa {
