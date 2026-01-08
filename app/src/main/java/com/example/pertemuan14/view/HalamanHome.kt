@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,10 +48,10 @@ import com.example.pertemuan14.viewmodel.StatusUiSiswa
 @Composable
 fun HomeScreen(
     navigateToItemEntry: () -> Unit,
-    navigateToItemUpdate: (String) -> Unit,
+    navigateToItemUpdate: (Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(factory = PenyediaViewModel.Factory)
-){
+) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -62,56 +64,56 @@ fun HomeScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
+                //edit 1.2 - event onClick
                 onClick = navigateToItemEntry,
                 shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.padding(dimensionResource(id = R.dimen.padding_large))
-            ){
+            ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = stringResource(R.string.entry_siswa)
                 )
             }
-        },
+        }
     ) { innerPadding ->
-        HomeStatus(
+        HomeBody(
             statusUiSiswa = viewModel.statusUiSiswa,
-            retryAction = { viewModel.loadSiswa() },
-            modifier = Modifier.padding(innerPadding),
-            onDetailClick = navigateToItemUpdate,
-            onDeleteClick = {
-                // viewModel.deleteSiswa(it) // Implement delete logic
-                viewModel.loadSiswa()
-            }
+            onSiswaClick = navigateToItemUpdate,
+            retryAction = viewModel::loadSiswa,
+            modifier = modifier
+                .padding(innerPadding)
+                .fillMaxSize()
         )
     }
 }
 
 @Composable
-fun HomeStatus(
+fun HomeBody(
     statusUiSiswa: StatusUiSiswa,
+    onSiswaClick: (Int) -> Unit,
     retryAction: () -> Unit,
-    modifier: Modifier = Modifier,
-    onDeleteClick: (Siswa) -> Unit = {},
-    onDetailClick: (String) -> Unit
-){
-    when (statusUiSiswa) {
-        is StatusUiSiswa.Loading -> OnLoading(modifier = modifier)
-        is StatusUiSiswa.Success -> SiswaLayout(
-            siswa = statusUiSiswa.siswa,
-            modifier = modifier.fillMaxWidth(),
-            onDetailClick = {
-                onDetailClick(it.id.toString())
-            },
-            onDeleteClick = {
-                onDeleteClick(it)
-            }
-        )
-        is StatusUiSiswa.Error -> OnError(retryAction, modifier = modifier)
+    modifier: Modifier = Modifier
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+    ) {
+        when (statusUiSiswa) {
+            is StatusUiSiswa.Loading -> LoadingScreen()
+            is StatusUiSiswa.Success -> DataSiswa(
+                itemSiswa = statusUiSiswa.siswa,
+                onSiswaClick = { onSiswaClick(it.id.toInt()) }
+            )
+            is StatusUiSiswa.Error -> ErrorScreen(
+                retryAction,
+                modifier = modifier.fillMaxSize()
+            )
+        }
     }
 }
 
 @Composable
-fun OnLoading(modifier: Modifier = Modifier){
+fun LoadingScreen(modifier: Modifier = Modifier) {
     Image(
         modifier = modifier.size(200.dp),
         painter = painterResource(R.drawable.loading_img),
@@ -120,16 +122,16 @@ fun OnLoading(modifier: Modifier = Modifier){
 }
 
 @Composable
-fun OnError(retryAction: () -> Unit, modifier: Modifier = Modifier){
+fun ErrorScreen(retryAction: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.loading_img), contentDescription = ""
+        Text(
+            text = stringResource(R.string.gagal),
+            modifier = Modifier.padding(16.dp)
         )
-        Text(text = stringResource(R.string.gagal), modifier = Modifier.padding(16.dp))
         Button(onClick = retryAction) {
             Text(stringResource(R.string.retry))
         }
@@ -137,61 +139,50 @@ fun OnError(retryAction: () -> Unit, modifier: Modifier = Modifier){
 }
 
 @Composable
-fun SiswaLayout(
-    siswa: List<Siswa>,
-    modifier: Modifier = Modifier,
-    onDetailClick: (Siswa) -> Unit,
-    onDeleteClick: (Siswa) -> Unit = {}
-){
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        items(siswa) { orang ->
-            SiswaCard(
-                siswa = orang,
+fun DataSiswa(
+    itemSiswa: List<Siswa>,
+    onSiswaClick: (Siswa) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(modifier = modifier) {
+        items(items = itemSiswa, key = { it.id }) { person ->
+            ItemSiswa(
+                siswa = person,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onDetailClick(orang) },
-                onDeleteClick = {
-                    onDeleteClick(orang)
-                }
+                    .padding(dimensionResource(id = R.dimen.padding_small))
+                    .clickable { onSiswaClick(person) }
             )
         }
     }
 }
 
 @Composable
-fun SiswaCard(
+fun ItemSiswa(
     siswa: Siswa,
-    modifier: Modifier = Modifier,
-    onDeleteClick: (Siswa) -> Unit = {}
-){
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = modifier,
-        shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(dimensionResource(id = R.dimen.padding_large)),
-            verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.padding_small))
+            verticalArrangement = Arrangement.spacedBy(
+                dimensionResource(id = R.dimen.padding_small)
+            )
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     text = siswa.nama,
                     style = MaterialTheme.typography.titleLarge,
                 )
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = { onDeleteClick(siswa) }) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = null,
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Phone,
+                    contentDescription = null
+                )
             }
             Text(
                 text = siswa.telpon,

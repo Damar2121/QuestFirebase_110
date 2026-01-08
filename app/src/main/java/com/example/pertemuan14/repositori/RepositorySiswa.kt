@@ -8,6 +8,9 @@ import kotlinx.coroutines.tasks.await
 interface RepositorySiswa {
     suspend fun getDataSiswa(): List<Siswa>
     suspend fun postDataSiswa(siswa: Siswa)
+    suspend fun getSatuDataSiswa(id: Long): Siswa?
+    suspend fun editDataSiswa(id: Long, siswa: Siswa)
+    suspend fun hapusDataSiswa(id: Long)
 }
 
 class FirebaseRepositorySiswa : RepositorySiswa {
@@ -32,7 +35,7 @@ class FirebaseRepositorySiswa : RepositorySiswa {
     override suspend fun postDataSiswa(siswa: Siswa) {
         val docRef = if (siswa.id == 0L) collection.document() else collection.document(siswa.id.toString())
         val data = hashMapOf(
-            "id" to (siswa.id.takeIf { it != 0L } ?: docRef.hashCode()),
+            "id" to (siswa.id.takeIf { it != 0L } ?: docRef.id.hashCode()),
             "nama" to siswa.nama,
             "alamat" to siswa.alamat,
             "telpon" to siswa.telpon
@@ -40,7 +43,24 @@ class FirebaseRepositorySiswa : RepositorySiswa {
         docRef.set(data).await()
     }
 
-    override suspend fun editSatuSiswa(id: Long, siswa: Siswa) {
+    override suspend fun getSatuDataSiswa(id: Long): Siswa? {
+        return try {
+            val query = collection.whereEqualTo("id", id).get().await()
+            query.documents.firstOrNull()?.let { doc ->
+                Siswa(
+                    id = doc.getLong("id")?.toLong() ?: 0,
+                    nama = doc.getString("nama") ?: "",
+                    alamat = doc.getString("alamat") ?: "",
+                    telpon = doc.getString("telpon") ?: ""
+                )
+            }
+        } catch (e: Exception) {
+            println("Gagal baca data siswa - ${e.message}")
+            null
+        }
+    }
+
+    override suspend fun editDataSiswa(id: Long, siswa: Siswa) {
         val docQuery = collection.whereEqualTo("id", id).get().await()
         val docId = docQuery.documents.firstOrNull()?.id ?: return
         collection.document(docId).set(
@@ -53,7 +73,7 @@ class FirebaseRepositorySiswa : RepositorySiswa {
         ).await()
     }
 
-    override suspend fun hapusSatuSiswa(id: Long) {
+    override suspend fun hapusDataSiswa(id: Long) {
         val docQuery = collection.whereEqualTo("id", id).get().await()
         val docId = docQuery.documents.firstOrNull()?.id ?: return
         collection.document(docId).delete().await()
